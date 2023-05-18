@@ -566,7 +566,7 @@ const root = document.querySelector("#root");
 root.append(new (0, _appDefault.default)().el);
 (0, _routesDefault.default)(); //페이지인 라우터가 루트위로 올라가게되면 아직 생성 전이라 에러가 나게됨
 
-},{"./App":"2kQhy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./routes":"3L9mC"}],"2kQhy":[function(require,module,exports) {
+},{"./App":"2kQhy","./routes":"3L9mC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2kQhy":[function(require,module,exports) {
 // export default class App {
 //   constructor() {
 //     this.el = document.createElement("div");
@@ -657,13 +657,14 @@ class App extends (0, _rami.Component) {
 }
 exports.default = App;
 
-},{"./core/rami":"3wxuq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./components/TheHeader":"3Cyq4"}],"3wxuq":[function(require,module,exports) {
+},{"./core/rami":"3wxuq","./components/TheHeader":"3Cyq4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3wxuq":[function(require,module,exports) {
 //// Component ////
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Component", ()=>Component);
-//// Router ////
 parcelHelpers.export(exports, "createRouter", ()=>createRouter);
+//// Store ////
+parcelHelpers.export(exports, "Store", ()=>Store);
 class Component {
     constructor(payload = {}){
         const { tagName ="div" , state ={} , props ={}  } = payload; //tagName에 아무런 요소가 없으면 div로 기본값 설정
@@ -676,13 +677,63 @@ class Component {
     // ...
     }
 }
+//// Router ////
+function routeRender(routes) {
+    if (!location.hash) history.replaceState(null, "", "/#/"); //해쉬가 안들어있을 경우 해쉬를 자동 추가
+    const routerView = document.querySelector("router-view");
+    //http://localhost:123/#?about?name=rami
+    //#/about?name=rami
+    const [hash, queryString = ""] = location.hash.split("?");
+    // a=123&b=456
+    // ['a=123, b= 456'] 이걸
+    // { a: '123', b: '456'}로 변환
+    const query = queryString.split("&").reduce((acc, cur)=>{
+        const [key, value] = cur.split("=");
+        acc[key] = value;
+        return acc;
+    }, {}); //acc 누적이되는 변수, cur 현재 값
+    history.replaceState(query, "");
+    const currentRoute = routes.find((route)=>new RegExp(`${route.path}/?$`).test(hash));
+    routerView.innerHTML = "";
+    routerView.append(new currentRoute.component().el);
+    //페이지가 바꼈을때 페이지 상단으로 이동하기
+    window.scrollTo(0, 0); //페이지의 스크롤 조정
+}
 function createRouter(routes) {
     return function() {
         window.addEventListener("popstate", ()=>{
-            routeRender(router);
+            routeRender(routes);
         });
         routeRender(routes);
     };
+}
+class Store {
+    constructor(state){
+        this.state = {};
+        this.observers = {};
+        for(const key in state)Object.defineProperty(this.state, key, {
+            get: ()=>state[key],
+            //this.state에 지정하는 key값을 사용할때 동작
+            set: (val)=>{
+                //this.state에 특정 속성에대한 값을 할당할때 사용
+                state[key] = val;
+                //this.observers['message']()
+                // this.observers[key](); //message가 등록된 하나의 객체데이터
+                this.observers[key].forEach((observer)=>observer(val));
+            //forEach로 각각의 콜백함수만큼 반복
+            }
+        });
+    }
+    subscribe(key, cb) {
+        //{ message: [cb1, cb2, cb3...] }
+        Array.isArray(this.observers[key]) ? this.observers[key].push(cb) : this.observers[key] = [
+            cb
+        ];
+    //this.observers['message'] = () => {}
+    //{ message: () => {} } -> 하나의 함수만 등록 가능
+    //{ message: [() => {}, () => {}, () => {}] } ->배열데이터로 여러개의 함수 가능
+    // this.observers[key] = cb;
+    }
 }
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gkKU3":[function(require,module,exports) {
@@ -753,27 +804,108 @@ exports.default = (0, _rami.createRouter)([
     }
 ]);
 
-},{"./Home":"0JSNG","./About":"gdB30","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","../core/rami":"3wxuq"}],"0JSNG":[function(require,module,exports) {
+},{"../core/rami":"3wxuq","./Home":"0JSNG","./About":"gdB30","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"0JSNG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _rami = require("../core/rami");
+var _textField = require("../components/TextField");
+var _textFieldDefault = parcelHelpers.interopDefault(_textField);
+var _message = require("../components/Message");
+var _messageDefault = parcelHelpers.interopDefault(_message);
+var _title = require("../components/Title");
+var _titleDefault = parcelHelpers.interopDefault(_title);
 class Home extends (0, _rami.Component) {
     render() {
         this.el.innerHTML = /* html */ `
         <h1>Home Page!</h1>
         `;
+        this.el.append(new (0, _textFieldDefault.default)().el, new (0, _messageDefault.default)().el, new (0, _titleDefault.default)().el);
     }
 }
 exports.default = Home;
 
-},{"../core/rami":"3wxuq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gdB30":[function(require,module,exports) {
+},{"../core/rami":"3wxuq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","../components/TextField":"e6IWT","../components/Message":"i84kQ","../components/Title":"6wotK"}],"e6IWT":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _rami = require("../core/rami");
+var _message = require("../store/message");
+var _messageDefault = parcelHelpers.interopDefault(_message);
+class TextField extends (0, _rami.Component) {
+    render() {
+        this.el.innerHTML = /* html */ `
+        <input value="${(0, _messageDefault.default).state.message}" />
+        `;
+        const inputEl = this.el.querySelector("input");
+        inputEl.addEventListener("input", ()=>{
+            (0, _messageDefault.default).state.message = inputEl.value;
+        });
+    }
+}
+exports.default = TextField;
+
+},{"../core/rami":"3wxuq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","../store/message":"4gYOO"}],"4gYOO":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _rami = require("../core/rami");
+exports.default = new (0, _rami.Store)({
+    message: "Hello~"
+});
+
+},{"../core/rami":"3wxuq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i84kQ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _rami = require("../core/rami");
+var _message = require("../store/message");
+var _messageDefault = parcelHelpers.interopDefault(_message);
+class Message extends (0, _rami.Component) {
+    constructor(){
+        super();
+        (0, _messageDefault.default).subscribe("message", ()=>{
+            this.render();
+        });
+    }
+    render() {
+        this.el.innerHTML = /* html */ `
+        <h2>${(0, _messageDefault.default).state.message}</h2>
+        `;
+    }
+}
+exports.default = Message;
+
+},{"../core/rami":"3wxuq","../store/message":"4gYOO","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6wotK":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _rami = require("../core/rami");
+var _message = require("../store/message");
+var _messageDefault = parcelHelpers.interopDefault(_message);
+class Tilte extends (0, _rami.Component) {
+    constructor(){
+        super({
+            tagName: "h1"
+        });
+        (0, _messageDefault.default).subscribe("message", (newVal)=>{
+            console.log("newVal: ", newVal);
+            this.render();
+        });
+    }
+    render() {
+        this.el.textContent = `Title: ${(0, _messageDefault.default).state.message}`;
+    }
+}
+exports.default = Tilte;
+
+},{"../core/rami":"3wxuq","../store/message":"4gYOO","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gdB30":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _rami = require("../core/rami");
 class About extends (0, _rami.Component) {
     render() {
+        const { a , b , c  } = history.state;
         this.el.innerHTML = /* html */ `
         <h1>About Page!</h1>
+        <h2>${a}</h2>
+        <h2>${b}</h2>
+        <h2>${c}</h2>
         `;
     }
 }
